@@ -9,10 +9,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, windows-2019, macos-10.15]
-        sourcemod-version: [1.10-dev]
+        os: [ubuntu-20.04, windows-2019, macos-10.15]
+        sourcemod-version: [1.11-dev]
         include:
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             target-archs: x86,x86_64
 
           - os: windows-2019
@@ -63,8 +63,7 @@ jobs:
         run: |
           mkdir build && cd build
           perl ../curl/lib/mk-ca-bundle.pl
-          python ../configure.py --enable-optimize --targets=${{ matrix.target-archs }} \
-            ${{ github.ref == 'refs/heads/main' && '--breakpad-dump --symbol-files' || '' }}
+          python ../configure.py --enable-optimize --targets=${{ matrix.target-archs }}
           ambuild
 
       - name: Upload artifact
@@ -87,14 +86,26 @@ jobs:
       - name: Package
         run: |
           version=`echo $GITHUB_REF | sed "s/refs\/tags\///"`
-          7z a sm-ripext-${version}-linux.zip ./Linux/*
-          7z a sm-ripext-${version}-mac.zip ./macOS/*
-          7z a sm-ripext-${version}-windows.zip ./Windows/*
+          if [ -d "./Linux/" ]; then
+            cd ./Linux/
+            tar -czf ../${{ github.event.repository.name }}-${version}-linux.tar.gz -T <(\ls -1)
+            cd -
+          fi
+          if [ -d "./macOS/" ]; then
+            cd ./macOS/
+            tar -czf ../${{ github.event.repository.name }}-${version}-mac.tar.gz -T <(\ls -1)
+            cd -
+          fi
+          if [ -d "./Windows/" ]; then
+            cd ./Windows/
+            tar -czf ../${{ github.event.repository.name }}-${version}-windows.tar.gz -T <(\ls -1)
+            cd -
+          fi
 
       - name: Release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: '*.zip'
+          file: '*.tar.gz'
           tag: ${{ github.ref }}
           file_glob: true
