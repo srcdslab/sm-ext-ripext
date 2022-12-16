@@ -92,6 +92,12 @@ static cell_t GetObjectValue(IPluginContext *pContext, const cell_t *params)
 		return BAD_HANDLE;
 	}
 
+	bool isRef = params[3];
+	if (isRef)
+	{
+		return hndlValue;
+	}
+
 	// Increase the reference counter, meaning the value handle must be
 	// freed via delete or CloseHandle().
 	json_incref(value);
@@ -513,6 +519,12 @@ static cell_t GetArrayValue(IPluginContext *pContext, const cell_t *params)
 	{
 		pContext->ThrowNativeError("Could not create value handle (error %d)", err);
 		return BAD_HANDLE;
+	}
+
+	bool isRef = params[3];
+	if (isRef)
+	{
+		return hndlValue;
 	}
 
 	// Increase the reference counter, meaning the value handle must be

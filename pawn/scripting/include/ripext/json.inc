@@ -94,9 +94,10 @@ methodmap JSONObject < JSON
 	// The JSON must be freed via delete or CloseHandle().
 	//
 	// @param key        Key string.
+	// @param ref        Do you want the ref or a copy.
 	// @return           Value read.
 	// @error            Invalid key.
-	public native JSON Get(const char[] key);
+	public native JSON Get(const char[] key, bool ref = false);
 
 	// Retrieves a boolean value from the object.
 	//
@@ -265,9 +266,10 @@ methodmap JSONArray < JSON
 	// The JSON must be freed via delete or CloseHandle().
 	//
 	// @param index      Index in the array.
+	// @param ref        Do you want the ref or the copy.
 	// @return           Value read.
 	// @error            Invalid index.
-	public native JSON Get(int index);
+	public native JSON Get(int index, bool ref = false);
 
 	// Retrieves a boolean value from the array.
 	//
