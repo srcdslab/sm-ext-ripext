@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-2019, macos-10.15]
+        os: [ubuntu-20.04, windows-2019]
         sourcemod-version: [1.11-dev]
         include:
           - os: ubuntu-20.04
@@ -17,9 +17,6 @@ jobs:
 
           - os: windows-2019
             target-archs: x86,x86_64
-
-          - os: macos-10.15
-            target-archs: x86_64
 
     steps:
       - name: Install Linux packages
@@ -89,11 +86,6 @@ jobs:
           if [ -d "./Linux/" ]; then
             cd ./Linux/
             tar -czf ../${{ github.event.repository.name }}-${version}-linux.tar.gz -T <(\ls -1)
-            cd -
-          fi
-          if [ -d "./macOS/" ]; then
-            cd ./macOS/
-            tar -czf ../${{ github.event.repository.name }}-${version}-mac.tar.gz -T <(\ls -1)
             cd -
           fi
           if [ -d "./Windows/" ]; then
