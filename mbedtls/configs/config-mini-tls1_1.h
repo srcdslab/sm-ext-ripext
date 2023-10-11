@@ -33,13 +33,13 @@
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_TIME
 
-/* mbed TLS feature support */
+/* Mbed TLS feature support */
 #define MBEDTLS_CIPHER_MODE_CBC
 #define MBEDTLS_PKCS1_V15
 #define MBEDTLS_KEY_EXCHANGE_RSA_ENABLED
 #define MBEDTLS_SSL_PROTO_TLS1_1
 
-/* mbed TLS modules */
+/* Mbed TLS modules */
 #define MBEDTLS_AES_C
 #define MBEDTLS_ASN1_PARSE_C
 #define MBEDTLS_ASN1_WRITE_C
@@ -71,6 +71,20 @@
 /* For testing with compat.sh */
 #define MBEDTLS_FS_IO
 
+/* These defines are present so that the config modifying scripts can enable
+ * them during tests/scripts/test-ref-configs.pl */
+//#define MBEDTLS_USE_PSA_CRYPTO
+//#define MBEDTLS_PSA_CRYPTO_C
+
+/* With MBEDTLS_PSA_CRYPTO_C, importing an RSA key requires MBEDTLS_PK_WRITE_C */
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+#define MBEDTLS_PK_WRITE_C
+#endif
 #include "mbedtls/check_config.h"
+
+/* Error messages and TLS debugging traces
+ * (huge code size increase, needed for tests/ssl-opt.sh) */
+//#define MBEDTLS_DEBUG_C
+//#define MBEDTLS_ERROR_C
 
 #endif /* MBEDTLS_CONFIG_H */

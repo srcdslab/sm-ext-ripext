@@ -40,13 +40,13 @@
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_TIME
 
-/* mbed TLS feature support */
+/* Mbed TLS feature support */
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP384R1_ENABLED
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 #define MBEDTLS_SSL_PROTO_TLS1_2
 
-/* mbed TLS modules */
+/* Mbed TLS modules */
 #define MBEDTLS_AES_C
 #define MBEDTLS_ASN1_PARSE_C
 #define MBEDTLS_ASN1_WRITE_C
@@ -80,8 +80,7 @@
 #define MBEDTLS_AES_ROM_TABLES
 
 /* Save RAM by adjusting to our exact needs */
-#define MBEDTLS_ECP_MAX_BITS   384
-#define MBEDTLS_MPI_MAX_SIZE    48 // 384 bits is 48 bytes
+#define MBEDTLS_MPI_MAX_SIZE    48 // 48 bytes for a 384-bit elliptic curve
 
 /* Save RAM at the expense of speed, see ecp.h */
 #define MBEDTLS_ECP_WINDOW_SIZE        2
@@ -104,11 +103,26 @@
 
 /*
  * Save RAM at the expense of interoperability: do this only if you control
- * both ends of the connection!  (See coments in "mbedtls/ssl.h".)
+ * both ends of the connection!  (See comments in "mbedtls/ssl.h".)
  * The minimum size here depends on the certificate chain used as well as the
  * typical size of records.
  */
 #define MBEDTLS_SSL_MAX_CONTENT_LEN             1024
+
+/* These defines are present so that the config modifying scripts can enable
+ * them during tests/scripts/test-ref-configs.pl */
+//#define MBEDTLS_USE_PSA_CRYPTO
+//#define MBEDTLS_PSA_CRYPTO_C
+
+/* With USE_PSA_CRYPTO, some PK operations also need PK_WRITE */
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+#define MBEDTLS_PK_WRITE_C
+#endif
+
+/* Error messages and TLS debugging traces
+ * (huge code size increase, needed for tests/ssl-opt.sh) */
+//#define MBEDTLS_DEBUG_C
+//#define MBEDTLS_ERROR_C
 
 #include "mbedtls/check_config.h"
 
