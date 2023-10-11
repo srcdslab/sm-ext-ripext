@@ -9,15 +9,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+
         os: [ubuntu-20.04, windows-2019]
         sourcemod-version: [1.11-dev]
         include:
           - os: ubuntu-20.04
             target-archs: x86,x86_64
 
+
           - os: windows-2019
             target-archs: x86,x86_64
-
+ 
     steps:
       - name: Install Linux packages
         if: runner.os == 'Linux'
@@ -26,15 +28,15 @@ jobs:
           sudo apt install -yq --no-install-recommends g++-multilib
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           path: extension
 
       - name: Checkout SourceMod
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: alliedmodders/sourcemod
           ref: ${{ matrix.sourcemod-version }}
@@ -47,7 +49,7 @@ jobs:
           pip install git+https://github.com/alliedmodders/ambuild
 
       - name: Checkout AMBuild
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           repository: alliedmodders/ambuild
           path: ambuild
@@ -64,7 +66,7 @@ jobs:
           ambuild
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ runner.os }}
           path: extension/build/package
@@ -78,7 +80,7 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
 
       - name: Package
         run: |
