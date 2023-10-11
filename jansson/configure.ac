@@ -1,5 +1,5 @@
 AC_PREREQ([2.60])
-AC_INIT([jansson], [2.13.1], [https://github.com/akheron/jansson/issues])
+AC_INIT([jansson], [2.14], [https://github.com/akheron/jansson/issues])
 
 AC_CONFIG_AUX_DIR([.])
 AM_INIT_AUTOMAKE([1.10 foreign])
@@ -137,6 +137,10 @@ fi
 AS_IF([test "x$with_Bsymbolic" = "xyes"], [JSON_BSYMBOLIC_LDFLAGS=-Wl[,]-Bsymbolic-functions])
 AC_SUBST(JSON_BSYMBOLIC_LDFLAGS)
 
+# Enable symbol versioning on GNU libc
+JSON_SYMVER_LDFLAGS=
+AC_CHECK_DECL([__GLIBC__], [JSON_SYMVER_LDFLAGS=-Wl,--default-symver])
+AC_SUBST([JSON_SYMVER_LDFLAGS])
 
 AC_ARG_ENABLE([ossfuzzers],
   [AS_HELP_STRING([--enable-ossfuzzers],
