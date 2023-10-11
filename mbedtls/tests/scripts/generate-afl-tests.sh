@@ -6,7 +6,7 @@
 #
 # Usage: generate-afl-tests.sh <test data file path>
 #  <test data file path> - should be the path to one of the test suite files
-#                          such as 'test_suite_mpi.data'
+#                          such as 'test_suite_rsa.data'
 #
 # Copyright The Mbed TLS Contributors
 # SPDX-License-Identifier: Apache-2.0
@@ -41,7 +41,7 @@ THIS_DIR=$(basename $PWD)
 if [ -d ../library -a -d ../include -a -d ../tests -a $THIS_DIR == "tests" ];
 then :;
 else
-    echo " [!] Must be run from mbed TLS tests directory" >&2
+    echo " [!] Must be run from Mbed TLS tests directory" >&2
     exit 1
 fi
 

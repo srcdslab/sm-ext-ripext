@@ -38,7 +38,7 @@
 /* System support */
 #define MBEDTLS_HAVE_ASM
 
-/* mbed TLS feature support */
+/* Mbed TLS feature support */
 #define MBEDTLS_AES_ROM_TABLES
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
 #define MBEDTLS_ECP_NIST_OPTIM
@@ -50,7 +50,7 @@
 #define MBEDTLS_SSL_DTLS_HELLO_VERIFY
 #define MBEDTLS_SSL_EXPORT_KEYS
 
-/* mbed TLS modules */
+/* Mbed TLS modules */
 #define MBEDTLS_AES_C
 #define MBEDTLS_ASN1_PARSE_C
 #define MBEDTLS_ASN1_WRITE_C
@@ -81,11 +81,15 @@
 #define MBEDTLS_AES_ROM_TABLES
 
 /* Save RAM by adjusting to our exact needs */
-#define MBEDTLS_ECP_MAX_BITS             256
-#define MBEDTLS_MPI_MAX_SIZE              32 // 256 bits is 32 bytes
+#define MBEDTLS_MPI_MAX_SIZE              32 // 32 bytes for a 256-bit elliptic curve
 
 /* Save ROM and a few bytes of RAM by specifying our own ciphersuite list */
 #define MBEDTLS_SSL_CIPHERSUITES MBEDTLS_TLS_ECJPAKE_WITH_AES_128_CCM_8
+
+/* These defines are present so that the config modifying scripts can enable
+ * them during tests/scripts/test-ref-configs.pl */
+//#define MBEDTLS_USE_PSA_CRYPTO
+//#define MBEDTLS_PSA_CRYPTO_C
 
 #include "mbedtls/check_config.h"
 
