@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod REST in Pawn Extension
- * Copyright 2017-2025 Erik Minekus
+ * Copyright 2017-2026 Erik Minekus
  * =============================================================================
  *
  * This program is free software: you can redistribute it and/or modify it under
@@ -30,7 +30,7 @@
 /* Basic information exposed publicly */
 #define SMEXT_CONF_NAME			"REST in Pawn"
 #define SMEXT_CONF_DESCRIPTION	"Provides HTTP and JSON natives for plugins"
-#define SMEXT_CONF_VERSION		"1.3.2"
+#define SMEXT_CONF_VERSION		"1.3.3"
 #define SMEXT_CONF_AUTHOR		"Tsunami"
 #define SMEXT_CONF_URL			"https://forums.alliedmods.net/showthread.php?t=298024"
 #define SMEXT_CONF_LOGTAG		"RIPEXT"
