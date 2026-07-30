@@ -25,7 +25,7 @@
 #include <string>
 #include <curl/curl.h>
 #include <jansson.h>
-#include <sm_stringhashmap.h>
+#include <sm_hashmap.h>
 #include <stdlib.h>
 #include <string.h>
 #include <uv.h>
