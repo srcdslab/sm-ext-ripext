@@ -46,12 +46,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: extension
 
       - name: Checkout SourceMod ${{ matrix.sourcemod-version }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: alliedmodders/sourcemod
           ref: ${{ matrix.sourcemod-version }}
