@@ -1,16 +1,6 @@
-name: Build and release
+name: CI
 
-on:
-  push:
-    branches:
-      - main
-      - master
-    tags:
-      - 'v*.*.*'
-  pull_request:
-    branches:
-      - main
-      - master
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build:
@@ -19,25 +9,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, windows-2019, macos-11]
-        sourcemod-version: [1.11-dev]
+        os: [ubuntu-22.04, windows-2022]
+        sourcemod-version: [master]
         python-version: ['3.10']
         include:
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             target-archs: x86,x86_64
             platform: linux
             compiler_cc: clang
             compiler_cxx: clang++
 
-          - os: windows-2019
+          - os: windows-2022
             target-archs: x86,x86_64
             platform: windows
-            compiler_cc: clang
-            compiler_cxx: clang++
-
-          - os: macos-11
-            target-archs: x86_64
-            platform: macos
             compiler_cc: clang
             compiler_cxx: clang++
 
@@ -57,17 +41,17 @@ jobs:
           ${{ matrix.compiler_cxx }} --version
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: extension
 
       - name: Checkout SourceMod ${{ matrix.sourcemod-version }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: alliedmodders/sourcemod
           ref: ${{ matrix.sourcemod-version }}
@@ -91,7 +75,7 @@ jobs:
           ambuild
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ github.event.repository.name }}-${{ matrix.platform }}
           path: extension/build/package
@@ -104,7 +88,7 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v8
 
       - name: Package
         run: |

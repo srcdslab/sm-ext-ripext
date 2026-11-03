@@ -2,7 +2,7 @@
  * vim: set ts=4 :
  * =============================================================================
  * SourceMod REST in Pawn Extension
- * Copyright 2017-2022 Erik Minekus
+ * Copyright 2017-2026 Erik Minekus
  * =============================================================================
  *
  * This program is free software: you can redistribute it and/or modify it under
@@ -25,7 +25,7 @@
 #include <string>
 #include <curl/curl.h>
 #include <jansson.h>
-#include <sm_stringhashmap.h>
+#include <sm_hashmap.h>
 #include <stdlib.h>
 #include <string.h>
 #include <uv.h>

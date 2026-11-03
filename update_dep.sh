@@ -1,83 +1,107 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# Replace the vendored jansson and/or curl sources with an upstream release.
+#
+# Usage: ./update_dep.sh [jansson|curl|all]
+#
+# To use another release, change the version and its SHA-256 below. Upstream
+# signs every tarball (curl: Daniel Stenberg, jansson: Petri Lehtinen), so check
+# the .asc signature once before pinning a new hash.
+#
+# The files this repository maintains itself are kept:
+#   jansson/include/jansson_config*.h, jansson/private_include/, jansson/src/AMBuilder
+#   curl/lib/curl_config*.h, curl/lib/AMBuilder
+# The source lists to paste into the AMBuilder files are printed at the end.
 
-set -e
-set -x
+set -euo pipefail
 
-# Change to whatever you want
-JANSSON_VERSION="2.14"
-CURL_VERSION="8.4.0"
+JANSSON_VERSION="2.15.1"
+JANSSON_SHA256="0c7114dc0b2d22a670724a1f95922029d7077c19dbf79a584cb8084d2f267f2f"
+CURL_VERSION="8.23.0"
+CURL_SHA256="e3de77cfa6367083c776a26647fc9f633b538c06c3baa73d931a252ac8f72b49"
 
-LIB="all"
-if [ -n "$1" ]; then
-    LIB="$1"
-fi
+LIB="${1:-all}"
+case "$LIB" in
+    jansson|curl|all) ;;
+    *) echo "Usage: $0 [jansson|curl|all]" >&2; exit 1 ;;
+esac
 
-PROJECT_PATH="$PWD"
+PROJECT_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+WORK_DIR="$(mktemp -d)"
+trap 'rm -rf "$WORK_DIR"' EXIT
+
+sha256_check() {
+    if command -v sha256sum >/dev/null; then
+        echo "$1  $2" | sha256sum -c -
+    else
+        echo "$1  $2" | shasum -a 256 -c -
+    fi
+}
+
+# fetch <url> <sha256> <name>: download and check the tarball, extract it to $WORK_DIR/<name>
+fetch() {
+    local archive="$WORK_DIR/$3.tar.gz"
+    curl -fsSL -o "$archive" "$1"
+    sha256_check "$2" "$archive"
+    mkdir "$WORK_DIR/$3"
+    tar -xzf "$archive" -C "$WORK_DIR/$3" --strip-components=1
+}
+
+# replace <dir> <keep...>: swap ./<dir> for the extracted release, keeping the listed paths (globs allowed)
+replace() {
+    local dir="$1" keep_dir="$WORK_DIR/keep-$1" pattern path
+    shift
+    mkdir "$keep_dir"
+    (cd "$PROJECT_PATH/$dir" && for pattern in "$@"; do
+        for path in $pattern; do
+            [ -e "$path" ] || continue
+            mkdir -p "$keep_dir/$(dirname "$path")"
+            cp -R "$path" "$keep_dir/$path"
+        done
+    done)
+    rm -rf "${PROJECT_PATH:?}/$dir"
+    cp -R "$WORK_DIR/$dir" "$PROJECT_PATH/$dir"
+    cp -R "$keep_dir/." "$PROJECT_PATH/$dir/"
+}
+
+# cfiles <makefile> <variable>: the .c files of a multi-line make variable, as AMBuilder entries
+cfiles() {
+    awk -v var="$2" '
+        $1 == var && $2 == "=" { on = 1 }
+        on {
+            for (i = 1; i <= NF; i++) if ($i ~ /\.c$/) print "    \x27" $i "\x27,"
+            if ($NF != "\\") on = 0
+        }
+    ' "$1" | sort -u
+}
+
+SOURCES=""
 
 if [[ "$LIB" == "jansson" || "$LIB" == "all" ]]; then
-    # JANSSON
-    TMP_DIR="/tmp"
-    TMP_DIR_JANSSON="$TMP_DIR/jansson"
-    rm -rf $TMP_DIR_JANSSON*
-    curl -Lo $TMP_DIR_JANSSON.tar.gz https://github.com/akheron/jansson/releases/download/v$JANSSON_VERSION/jansson-$JANSSON_VERSION.tar.gz
-    tar -xvf $TMP_DIR_JANSSON.tar.gz -C $TMP_DIR && mv $TMP_DIR/jansson-$JANSSON_VERSION $TMP_DIR_JANSSON
-    cd $TMP_DIR_JANSSON
-    mkdir -p build && cd build
-    cmake ../ -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_SHARED_LIBS=OFF -DCMAKE_CXX_STANDARD=14 -DCMAKE_INSTALL_PREFIX="$PWD/package"
-    make -j 8
-    make install
-    rm "$PWD/package/include/jansson_config.h"
-    cp -R "$PWD/package/include" ../
-    cd $PROJECT_PATH
-    cp -R "$TMP_DIR_JANSSON"/* ./jansson
+    fetch "https://github.com/akheron/jansson/releases/download/v$JANSSON_VERSION/jansson-$JANSSON_VERSION.tar.gz" \
+        "$JANSSON_SHA256" jansson
+    replace jansson 'include/jansson_config*.h' private_include src/AMBuilder
+    cp "$PROJECT_PATH/jansson/src/jansson.h" "$PROJECT_PATH/jansson/include/jansson.h"
 
-    JANSSON_AMBUILDER_SOURCES_PATH="$TMP_DIR_JANSSON/AMBuilder.sources"
-    echo "# JANSSON_SRC" > $JANSSON_AMBUILDER_SOURCES_PATH
-    cat jansson/src/Makefile.am | grep -o '[a-zA-Z0-9_]*\.c' | awk '!seen[$0]++' | sort | sed "s/.*/'&',/" >> $JANSSON_AMBUILDER_SOURCES_PATH
-    echo "" >> $JANSSON_AMBUILDER_SOURCES_PATH
-
-    echo "Sources generated in $JANSSON_AMBUILDER_SOURCES_PATH must be replaced in jansson/src/AMBuilder"
+    # dtoa.c is left out: it is only built when DTOA_ENABLED (see jansson/src/Makefile.am)
+    SOURCES+="# jansson/src/AMBuilder (libjansson_la_SOURCES in jansson/src/Makefile.am)"$'\n'
+    SOURCES+="$(cfiles "$WORK_DIR/jansson/src/Makefile.am" libjansson_la_SOURCES)"$'\n\n'
 fi
 
 if [[ "$LIB" == "curl" || "$LIB" == "all" ]]; then
-    # CURL
-    CURL_VERSION_UNDERSCORE="${CURL_VERSION//./_}"
+    fetch "https://github.com/curl/curl/releases/download/curl-${CURL_VERSION//./_}/curl-$CURL_VERSION.tar.gz" \
+        "$CURL_SHA256" curl
+    replace curl 'lib/curl_config*.h' lib/AMBuilder
 
-    TMP_DIR="/tmp"
-    TMP_DIR_CURL="$TMP_DIR/curl"
-    rm -rf $TMP_DIR_CURL*
-    curl -Lo $TMP_DIR_CURL.tar.gz https://github.com/curl/curl/releases/download/curl-$CURL_VERSION_UNDERSCORE/curl-$CURL_VERSION.tar.gz
-    tar -xvf $TMP_DIR_CURL.tar.gz -C $TMP_DIR && mv $TMP_DIR/curl-$CURL_VERSION $TMP_DIR_CURL
-    cd $TMP_DIR_CURL
-    mkdir -p build && cd build
-    cmake ../ -DCMAKE_POSITION_INDEPENDENT_CODE=ON -Dprotobuf_BUILD_SHARED_LIBS=OFF -DCMAKE_CXX_STANDARD=14 -DCMAKE_INSTALL_PREFIX="$PWD/package"
-    make -j 8
-    make install
-    cp -R "$PWD/package/include" ../
-    cd ..
-    cd $PROJECT_PATH
-    cp -R "$TMP_DIR_CURL"/* ./curl
-
-    CURL_AMBUILDER_SOURCES_PATH="$TMP_DIR_CURL/AMBuilder.sources"
-    echo "# LIB_CFILES" > $CURL_AMBUILDER_SOURCES_PATH
-    cat curl/lib/Makefile.in | grep -o '  [a-zA-Z0-9_]*\.c' | awk '!seen[$0]++' | sed 's/^[[:space:]]*//' | sort | sed "s/.*/'&',/" >> $CURL_AMBUILDER_SOURCES_PATH
-    echo "" >> $CURL_AMBUILDER_SOURCES_PATH
-
-    echo "# LIB_VAUTH_CFILES" >> $CURL_AMBUILDER_SOURCES_PATH
-    cat curl/lib/Makefile.in | grep -o 'vauth/[a-zA-Z0-9_]*\.c' | awk '!seen[$0]++' | sort | sed "s/.*/'&',/" >> $CURL_AMBUILDER_SOURCES_PATH
-    echo "" >> $CURL_AMBUILDER_SOURCES_PATH
-
-    echo "# LIB_VQUIC_CFILES" >> $CURL_AMBUILDER_SOURCES_PATH
-    cat curl/lib/Makefile.in | grep -o 'vquic/[a-zA-Z0-9_]*\.c' | awk '!seen[$0]++' | sort | sed "s/.*/'&',/" >> $CURL_AMBUILDER_SOURCES_PATH
-    echo "" >> $CURL_AMBUILDER_SOURCES_PATH
-
-    echo "# LIB_VSSH_CFILES" >> $CURL_AMBUILDER_SOURCES_PATH
-    cat curl/lib/Makefile.in | grep -o 'vssh/[a-zA-Z0-9_]*\.c' | awk '!seen[$0]++' | sort | sed "s/.*/'&',/" >> $CURL_AMBUILDER_SOURCES_PATH
-    echo "" >> $CURL_AMBUILDER_SOURCES_PATH
-
-    echo "# LIB_VTLS_CFILES" >> $CURL_AMBUILDER_SOURCES_PATH
-    cat curl/lib/Makefile.in | grep -o 'vtls/[a-zA-Z0-9_]*\.c' | awk '!seen[$0]++' | sort | sed "s/.*/'&',/" >> $CURL_AMBUILDER_SOURCES_PATH
-    echo "" >> $CURL_AMBUILDER_SOURCES_PATH
-
-    echo "Sources generated in $CURL_AMBUILDER_SOURCES_PATH must be replaced in curl/AMBuilder"
+    SOURCES+="# curl/lib/AMBuilder (curl/lib/Makefile.inc)"$'\n'
+    for var in $(grep -oE '^LIB_([A-Z]+_)?CFILES' "$WORK_DIR/curl/lib/Makefile.inc" | sort -u); do
+        SOURCES+="    # $var"$'\n'"$(cfiles "$WORK_DIR/curl/lib/Makefile.inc" "$var")"$'\n'
+    done
+    SOURCES+=$'\n'
 fi
+
+echo
+echo "Done. Paste these lists into the AMBuilder files, then review the *_config*.h headers kept above:"
+echo
+printf '%s' "$SOURCES"
