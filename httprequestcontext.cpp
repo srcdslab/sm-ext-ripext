@@ -33,6 +33,22 @@ static size_t ReadRequestBody(void *body, size_t size, size_t nmemb, void *userd
 	return to_copy;
 }
 
+/* curl rewinds the body when it sends it again: after a redirect (307/308, or a
+ * 301/302/303 answered before the whole body went out) and when it retries a
+ * request on a reused connection the server had closed. Without a seek callback
+ * that fails with "necessary data rewind wasn't possible". */
+static int SeekRequestBody(void *userdata, curl_off_t offset, int origin)
+{
+	HTTPRequestContext *context = (HTTPRequestContext *)userdata;
+	if (origin != SEEK_SET || offset < 0 || (size_t)offset > context->size)
+	{
+		return CURL_SEEKFUNC_FAIL;
+	}
+
+	context->pos = (size_t)offset;
+	return CURL_SEEKFUNC_OK;
+}
+
 static size_t WriteResponseBody(void *body, size_t size, size_t nmemb, void *userdata)
 {
 	size_t total = size * nmemb;
@@ -149,6 +165,8 @@ bool HTTPRequestContext::InitCurl()
 	curl_easy_setopt(curl, CURLOPT_PRIVATE, this);
 	curl_easy_setopt(curl, CURLOPT_READDATA, this);
 	curl_easy_setopt(curl, CURLOPT_READFUNCTION, &ReadRequestBody);
+	curl_easy_setopt(curl, CURLOPT_SEEKDATA, this);
+	curl_easy_setopt(curl, CURLOPT_SEEKFUNCTION, &SeekRequestBody);
 	curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
 	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, SM_RIPEXT_USER_AGENT);
