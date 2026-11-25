@@ -49,7 +49,8 @@ bool HTTPFileContext::InitCurl()
 	curl = curl_easy_init();
 	if (curl == NULL)
 	{
-		smutils->LogError(myself, "Could not initialize cURL session.");
+		/* Runs on the event loop thread: report through the callback, not LogError */
+		snprintf(error, sizeof(error), "Could not initialize cURL session.");
 		return false;
 	}
 
@@ -59,7 +60,7 @@ bool HTTPFileContext::InitCurl()
 	file = fopen(realpath, isUpload ? "rb" : "wb");
 	if (file == NULL)
 	{
-		smutils->LogError(myself, "Could not open file %s.", path.c_str());
+		snprintf(error, sizeof(error), "Could not open file %s.", path.c_str());
 		return false;
 	}
 
@@ -118,7 +119,12 @@ bool HTTPFileContext::InitCurl()
 
 void HTTPFileContext::OnCompleted()
 {
-	fclose(file);
+	/* NULL when InitCurl failed */
+	if (file != NULL)
+	{
+		fclose(file);
+		file = NULL;
+	}
 
 	/* Return early if the plugin was unloaded while the thread was running */
 	if (forward->GetFunctionCount() == 0)
@@ -126,8 +132,11 @@ void HTTPFileContext::OnCompleted()
 		return;
 	}
 
-	long status;
-	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+	long status = 0;
+	if (curl != NULL)
+	{
+		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+	}
 
 	forward->PushCell(status);
 	forward->PushCell(value);

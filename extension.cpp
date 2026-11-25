@@ -23,6 +23,7 @@
 #include "httpclient.h"
 #include "httprequest.h"
 #include "queue.h"
+#include <vector>
 
 // Limit the max processing request per tick
 #define MAX_PROCESS 10
@@ -166,6 +167,8 @@ static void EventLoop(void *data)
 
 static void AsyncPerformRequests(uv_async_t *handle)
 {
+	std::vector<IHTTPContext *> failed;
+
 	g_RequestQueue.Lock();
 	IHTTPContext *context;
 	// Limiter
@@ -177,7 +180,9 @@ static void AsyncPerformRequests(uv_async_t *handle)
 
 		if (!context->InitCurl())
 		{
-			delete context;
+			/* Deleting the context here would release its forward on this thread,
+			 * and the plugin would never be called back: complete it on the game thread. */
+			failed.push_back(context);
 			continue;
 		}
 
@@ -186,6 +191,18 @@ static void AsyncPerformRequests(uv_async_t *handle)
 	}
 
 	g_RequestQueue.Unlock();
+
+	/* Not under the request queue lock: the game thread takes the request queue lock
+	 * while holding the completed queue lock (a plugin starting a request from its callback). */
+	if (!failed.empty())
+	{
+		g_CompletedRequestQueue.Lock();
+		for (IHTTPContext *ctx : failed)
+		{
+			g_CompletedRequestQueue.Push(ctx);
+		}
+		g_CompletedRequestQueue.Unlock();
+	}
 }
 
 static void AsyncStopLoop(uv_async_t *handle)
