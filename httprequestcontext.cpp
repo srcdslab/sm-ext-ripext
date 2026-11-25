@@ -109,7 +109,8 @@ bool HTTPRequestContext::InitCurl()
 	curl = curl_easy_init();
 	if (curl == NULL)
 	{
-		smutils->LogError(myself, "Could not initialize cURL session.");
+		/* Runs on the event loop thread: report through the callback, not LogError */
+		snprintf(error, sizeof(error), "Could not initialize cURL session.");
 		return false;
 	}
 
