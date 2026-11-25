@@ -81,7 +81,15 @@ struct HTTPResponse {
 };
 
 struct JSONObjectKeys {
-	JSONObjectKeys(json_t *object) : object(object), iter(json_object_iter(object)) {}
+	/* Hold a reference: the iterator points into the object's hashtable, which the
+	 * plugin can free (delete the object, or response.Data after the callback) while
+	 * it still reads keys. */
+	JSONObjectKeys(json_t *object) : object(json_incref(object)), iter(json_object_iter(object)) {}
+
+	~JSONObjectKeys()
+	{
+		json_decref(object);
+	}
 
 	const char *GetKey()
 	{
